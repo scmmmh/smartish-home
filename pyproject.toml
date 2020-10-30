@@ -6,7 +6,6 @@ authors = ["Mark <mark.hall@work.room3b.eu>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-requests = "^2.24.0"
 websockets = "^8.1"
 
 [tool.poetry.dev-dependencies]
