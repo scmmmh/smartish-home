@@ -23,8 +23,8 @@ class SmartishHome():
         LOGGER.info('Connecting')
         async with websockets.connect(self._config.get('HomeAssistant', 'websocket')) as websocket:
             LOGGER.debug('Websocket connected')
-            client = Client(self._config.get('HomeAssistant', 'mqtt.host'))
-            client._client.username_pw_set(self._config.get('HomeAssistant', 'mqtt.username'), self._config.get('HomeAssistant', 'mqtt.password'))
+            client = Client(self._config.get('MQTT', 'host'))
+            client._client.username_pw_set(self._config.get('MQTT', 'username'), self._config.get('MQTT', 'password'))
             async with client as mqtt_session:
                 LOGGER.debug('MQTT connected')
                 ws_handler = WebsocketHandler(self._config, websocket)
