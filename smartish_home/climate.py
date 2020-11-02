@@ -10,6 +10,7 @@ class ClimateComponent():
         self._component_id = f'{room_id}:cc'
         self._temperature = []
         self._climate = []
+        LOGGER.debug(f'Creating Climate Control {self._component_id}')
 
     async def connect(self):
         pass

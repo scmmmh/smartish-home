@@ -1,4 +1,15 @@
 [[package]]
+category = "main"
+description = "Idomatic asyncio wrapper around paho-mqtt."
+name = "asyncio-mqtt"
+optional = false
+python-versions = "*"
+version = "0.7.0"
+
+[package.dependencies]
+paho-mqtt = ">=1.5.0"
+
+[[package]]
 category = "dev"
 description = "Atomic file writes."
 marker = "sys_platform == \"win32\""
@@ -49,6 +60,17 @@ version = "20.4"
 [package.dependencies]
 pyparsing = ">=2.0.2"
 six = "*"
+
+[[package]]
+category = "main"
+description = "MQTT version 5.0/3.1.1 client class"
+name = "paho-mqtt"
+optional = false
+python-versions = "*"
+version = "1.5.1"
+
+[package.extras]
+proxy = ["pysocks"]
 
 [[package]]
 category = "dev"
@@ -124,11 +146,14 @@ python-versions = ">=3.6.1"
 version = "8.1"
 
 [metadata]
-content-hash = "e30134dce0ffc9c838b62f7ccde8f266594be0742893534d4dcfa52b60f7b9bd"
-lock-version = "1.0"
+content-hash = "deba50bfbbe2b3ace82a62b3500d5f802e49a55666a0e2f4f0c92fd98e066b17"
 python-versions = "^3.8"
 
 [metadata.files]
+asyncio-mqtt = [
+    {file = "asyncio_mqtt-0.7.0-py3-none-any.whl", hash = "sha256:eed08ad8f8f3c6b83987e43629b81c4a491c082b3eebb40c14061d72024376a9"},
+    {file = "asyncio_mqtt-0.7.0.tar.gz", hash = "sha256:d945c37e549ada03d826705cf868617e97a69cf91ef09fea3381a27ffe31f691"},
+]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
     {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
@@ -148,6 +173,9 @@ more-itertools = [
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
     {file = "packaging-20.4.tar.gz", hash = "sha256:4357f74f47b9c12db93624a82154e9b120fa8293699949152b22065d556079f8"},
+]
+paho-mqtt = [
+    {file = "paho-mqtt-1.5.1.tar.gz", hash = "sha256:9feb068e822be7b3a116324e01fb6028eb1d66412bf98595ae72698965cb1cae"},
 ]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},

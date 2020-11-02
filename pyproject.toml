@@ -7,6 +7,7 @@ authors = ["Mark <mark.hall@work.room3b.eu>"]
 [tool.poetry.dependencies]
 python = "^3.8"
 websockets = "^8.1"
+asyncio-mqtt = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

@@ -80,5 +80,5 @@ class RoomController():
             else:
                 LOGGER.debug(f'Creating a ClimateController for {self._name}')
                 self._climate_component = ClimateComponent(self._room_id)
-                await self._climate_component.update_entities(temperature, climate)
                 await self._climate_component.connect()
+                await self._climate_component.update_entities(temperature, climate)
