@@ -2,6 +2,7 @@ import json
 import logging
 import websockets
 
+from asyncio import gather
 from configparser import ConfigParser
 
 from .room import RoomController
@@ -35,7 +36,7 @@ class HAWebsocket():
                     }))
                 elif msg['type'] == 'auth_ok':
                     LOGGER.debug('Authenticated')
-                    await self._send_message('config/area_registry/list')
+                    await self.send_message('config/area_registry/list')
                 #await websocket.send(json.dumps({
                 #    'id': next(ids),
                 #    'type': 'subscribe_events',
@@ -60,26 +61,23 @@ class HAWebsocket():
                         if msg_type == 'config/area_registry/list':
                             self._setup_rooms(msg['result'])
                             del self._messages[msg['id']]
-                            await self._send_message('config/device_registry/list')
+                            await self.send_message('config/device_registry/list')
                         elif msg_type == 'config/device_registry/list':
-                            for room in self._rooms:
-                                room.add_devices(msg['result'])
+                            await gather(*[room.add_devices(msg['result']) for room in self._rooms])
                             del self._messages[msg['id']]
-                            await self._send_message('config/entity_registry/list')
+                            await self.send_message('config/entity_registry/list')
                         elif msg_type == 'config/entity_registry/list':
-                            for room in self._rooms:
-                                room.add_entities(msg['result'])
+                            await gather(*[room.add_entities(msg['result']) for room in self._rooms])
                             del self._messages[msg['id']]
-                            await self._send_message('get_states')
+                            await self.send_message('get_states')
                         elif msg_type == 'get_states':
-                            for room in self._rooms:
-                                room.update_states(msg['result'])
+                            await gather(*[room.update_states(msg['result']) for room in self._rooms])
                             del self._messages[msg['id']]
 
     def _setup_rooms(self, rooms):
-        self._rooms = [RoomController(room) for room in rooms]
+        self._rooms = [RoomController(self, room) for room in rooms]
 
-    async def _send_message(self, message_type, payload=None):
+    async def send_message(self, message_type, payload=None):
         identifier = next(self._ids)
         msg = {
             'id': identifier,
