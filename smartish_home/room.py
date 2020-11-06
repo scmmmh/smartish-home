@@ -9,13 +9,14 @@ LOGGER = logging.getLogger('smartish_home.room')
 class RoomController():
     """Smartish Control of a single HomeAssistant Area."""
 
-    def __init__(self, websocket, settings: dict):
+    def __init__(self, websocket, mqtt_session, settings: dict):
         self._room_id = settings['area_id']
         self._name = settings['name']
         self._devices = {}
         self._entities = {}
         self._climate_component = None
         self._websocket = websocket
+        self._mqtt_session = mqtt_session
         LOGGER.debug(f'Created {self._name}')
 
     async def add_devices(self, devices: list):
@@ -79,6 +80,6 @@ class RoomController():
                 await self._climate_component.update_entities(temperature, climate)
             else:
                 LOGGER.debug(f'Creating a ClimateController for {self._name}')
-                self._climate_component = ClimateComponent(self._room_id)
+                self._climate_component = ClimateComponent(self._mqtt_session, self._room_id, self._name)
                 await self._climate_component.connect()
                 await self._climate_component.update_entities(temperature, climate)

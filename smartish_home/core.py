@@ -27,17 +27,18 @@ class SmartishHome():
             client._client.username_pw_set(self._config.get('MQTT', 'username'), self._config.get('MQTT', 'password'))
             async with client as mqtt_session:
                 LOGGER.debug('MQTT connected')
-                ws_handler = WebsocketHandler(self._config, websocket)
+                ws_handler = WebsocketHandler(self._config, websocket, mqtt_session)
                 await ws_handler.run()
 
 
 class WebsocketHandler():
 
-    def __init__(self, config: ConfigParser, websocket):
+    def __init__(self, config: ConfigParser, websocket, mqtt_session):
         self._config = config
         self._ids = id_seq()
         self._messages = {}
         self._websocket = websocket
+        self._mqtt_session = mqtt_session
         self._rooms = []
 
     async def run(self):
@@ -90,7 +91,7 @@ class WebsocketHandler():
                         del self._messages[msg['id']]
 
     def _setup_rooms(self, rooms):
-        self._rooms = [RoomController(self, room) for room in rooms]
+        self._rooms = [RoomController(self, self._mqtt_session, room) for room in rooms]
 
     async def send_message(self, message_type, payload=None):
         identifier = next(self._ids)
