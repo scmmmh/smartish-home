@@ -56,11 +56,6 @@ class WebsocketHandler():
             #await websocket.send(json.dumps({
             #    'id': next(ids),
             #    'type': 'subscribe_events',
-            #    'event_type': 'state_changed'
-            #}))
-            #await websocket.send(json.dumps({
-            #    'id': next(ids),
-            #    'type': 'subscribe_events',
             #    'event_type': 'area_registry_updated'
             #}))
             #await websocket.send(json.dumps({
@@ -89,6 +84,11 @@ class WebsocketHandler():
                     elif msg_type == 'get_states':
                         await gather(*[room.update_states(msg['result']) for room in self._rooms])
                         del self._messages[msg['id']]
+                        await self.send_message('subscribe_events',
+                                                {'event_type': 'state_changed'})
+                    elif msg_type == 'subscribe_events' and msg['type'] == 'event':
+                        if msg['event']['event_type'] == 'state_changed':
+                            await gather(*[room.update_states([msg['event']['data']['new_state']]) for room in self._rooms])
 
     def _setup_rooms(self, rooms):
         self._rooms = [RoomController(self, self._mqtt_session, room) for room in rooms]

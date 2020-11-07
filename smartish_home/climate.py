@@ -12,8 +12,8 @@ class ClimateComponent():
         self._component_id = f'{room_id}-sh-cc'
         LOGGER.debug(f'Creating Climate Control {self._component_id}')
         self._room_name = room_name
-        self._temperature = []
-        self._climate = []
+        self._temperature = {}
+        self._climate = {}
         self._mqtt_session = mqtt_session
         self._current_temperature = 'unknown'
         self._target_temperature = 10
@@ -50,16 +50,16 @@ class ClimateComponent():
         await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/available', 'offline')
 
     async def update_entities(self, temperature, climate):
-        self._temperature = temperature
-        self._climate = climate
-        await self._update()
+        self._temperature.update(dict([(t['entity_id'], t) for t in temperature]))
+        self._climate.update(dict([(c['entity_id'], c) for c in climate]))
+        await self.update()
 
     async def _listen_target_temperature(self):
         async with self._mqtt_session.filtered_messages(f'homeassistant/climate/{self._component_id}/targetTempCmd') as messages:
             await self._mqtt_session.subscribe(f'homeassistant/climate/{self._component_id}/targetTempCmd')
             async for message in messages:
                 self._target_temperature = float(message.payload.decode())
-                await self._update()
+                await self.update()
 
     async def _listen_mode(self):
         async with self._mqtt_session.filtered_messages(f'homeassistant/climate/{self._component_id}/thermostatModeCmd') as messages:
@@ -69,13 +69,14 @@ class ClimateComponent():
                     self._mode = 'heat'
                 elif message.payload.decode() == 'off':
                     self._mode = 'off'
-                await self._update()
+                await self.update()
 
-    async def _update(self):
+    async def update(self):
+        LOGGER.debug(f'Updating ClimateController {self._component_id}')
         temperatures = [float(t['state']['state'])
-                        for t in self._temperature if t['state']['state'] != 'unknown']
+                        for t in self._temperature.values() if t['state']['state'] != 'unknown']
         climates = [float(c['state']['attributes']['temperature'])
-                    for c in self._climate if c['state']['attributes']['temperature'] != 'unknown']
+                    for c in self._climate.values() if c['state']['attributes']['temperature'] != 'unknown']
         if temperatures and climates:
             await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/available', 'online')
             await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/currentTemp', '{0:.1f}'.format(sum(temperatures) / len(temperatures)))

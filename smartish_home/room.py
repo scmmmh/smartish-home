@@ -41,13 +41,18 @@ class RoomController():
                         self._entities[entity['entity_id']] = entity
 
     async def update_states(self, states: list):
+        changes = False
         for state in states:
             if state['entity_id'] in self._entities:
                 LOGGER.debug(f'Updating {self._entities[state["entity_id"]]["name"]} in {self._name}')
+                changes = True
                 self._entities[state['entity_id']]['state'] = state
-        await self._classify_entities()
+        if changes:
+            await self._process_entities()
+            if self._climate_component:
+                await self._climate_component.update()
 
-    async def _classify_entities(self):
+    async def _process_entities(self):
         changes = False
         for entity in self._entities.values():
             if 'device_class' not in entity:
