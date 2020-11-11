@@ -8,7 +8,7 @@ LOGGER = logging.getLogger('smartish_home.climate')
 
 class ClimateComponent():
 
-    def __init__(self, websocket, mqtt_session, room_id, room_name):
+    def __init__(self, websocket, mqtt_session, room_id, room_name, initial_state):
         self._component_id = f'{room_id}-sh-cc'
         self._room_name = room_name
         LOGGER.debug(f'Creating Climate Control {self._room_name}')
@@ -17,19 +17,21 @@ class ClimateComponent():
         self._websocket = websocket
         self._mqtt_session = mqtt_session
         self._current_temperature = 'unknown'
-        self._target_temperature = 10
-        self._mode = 'off'
+        self._target_temperature = initial_state['target_temperature'] if 'target_temperature' in initial_state else 10
+        self._mode = initial_state['mode'] if 'mode' in initial_state and initial_state['mode'] in ['heat', 'off'] else 'off'
+        self._tasks = []
+        self._connected = False
 
     async def add_climate(self, climate):
         self._climate[climate['entity_id']] = climate
         self._websocket.add_state_listener(climate['entity_id'], self)
-        if self._climate and self._temperature:
+        if self._climate and self._temperature and not self._connected:
             await self._connect()
 
     async def add_temperature(self, temperature):
         self._temperature[temperature['entity_id']] = temperature
         self._websocket.add_state_listener(temperature['entity_id'], self)
-        if self._climate and self._temperature:
+        if self._climate and self._temperature and not self._connected:
             await self._connect()
 
     async def state_update(self, entity_id, state):
@@ -39,6 +41,16 @@ class ClimateComponent():
         elif entity_id in self._temperature:
             self._temperature[entity_id]['state'] = state
             await self._update()
+
+    async def shutdown(self):
+        LOGGER.debug(f'Shutting down Climate Control {self._room_name}')
+        await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/config', '')
+        for task in self._tasks:
+            task.cancel()
+        self._connected = False
+        LOGGER.debug(f'Shut down Climate Control {self._room_name}')
+        return {'mode': self._mode,
+                'target_temperature': self._target_temperature}
 
     async def _listen_target_temperature(self):
         async with self._mqtt_session.filtered_messages(f'homeassistant/climate/{self._component_id}/targetTempCmd') as messages:
@@ -60,6 +72,7 @@ class ClimateComponent():
 
     async def _connect(self):
         LOGGER.debug(f'Creating MQTT Climate Control {self._room_name}')
+        self._connected = True
         message = {
             'name': self._room_name,
             'mode_command_topic': f'homeassistant/climate/{self._component_id}/thermostatModeCmd',
@@ -83,10 +96,15 @@ class ClimateComponent():
                 'name': 'Room Climate Control'
             },
         }
-        asyncio.get_event_loop().create_task(self._listen_target_temperature())
-        asyncio.get_event_loop().create_task(self._listen_mode())
+        self._tasks = [
+            asyncio.get_event_loop().create_task(self._listen_target_temperature()),
+            asyncio.get_event_loop().create_task(self._listen_mode())
+        ]
         await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/config', json.dumps(message))
-        await self._mqtt_session.publish(f'homeassistant/climate/{self._component_id}/available', 'offline')
+        asyncio.create_task(self._delayed_update())
+
+    async def _delayed_update(self, delay=5):
+        await asyncio.sleep(delay)
         await self._update()
 
     async def _update(self):
