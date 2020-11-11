@@ -40,6 +40,7 @@ class WebsocketHandler():
         self._websocket = websocket
         self._mqtt_session = mqtt_session
         self._rooms = []
+        self._state_listeners = {}
 
     async def run(self):
         while True:
@@ -70,7 +71,7 @@ class WebsocketHandler():
                 if msg['id'] in self._messages:
                     msg_type = self._messages[msg['id']]
                     if msg_type == 'config/area_registry/list':
-                        self._setup_rooms(msg['result'])
+                        self._rooms = [RoomController(self, self._mqtt_session, room) for room in msg['result']]
                         del self._messages[msg['id']]
                         await self.send_message('config/device_registry/list')
                     elif msg_type == 'config/device_registry/list':
@@ -82,16 +83,15 @@ class WebsocketHandler():
                         del self._messages[msg['id']]
                         await self.send_message('get_states')
                     elif msg_type == 'get_states':
-                        await gather(*[room.update_states(msg['result']) for room in self._rooms])
+                        await self._update_states(msg['result'])
                         del self._messages[msg['id']]
                         await self.send_message('subscribe_events',
                                                 {'event_type': 'state_changed'})
                     elif msg_type == 'subscribe_events' and msg['type'] == 'event':
                         if msg['event']['event_type'] == 'state_changed':
-                            await gather(*[room.update_states([msg['event']['data']['new_state']]) for room in self._rooms])
-
-    def _setup_rooms(self, rooms):
-        self._rooms = [RoomController(self, self._mqtt_session, room) for room in rooms]
+                            await self._update_states([msg['event']['data']['new_state']])
+                    elif msg_type == 'call_service':
+                        del self._messages[msg['id']]
 
     async def send_message(self, message_type, payload=None):
         identifier = next(self._ids)
@@ -103,3 +103,16 @@ class WebsocketHandler():
             msg.update(payload)
         await self._websocket.send(json.dumps(msg))
         self._messages[identifier] = message_type
+
+    def add_state_listener(self, entity_id, listener):
+        if entity_id in self._state_listeners:
+            if listener not in self._state_listeners:
+                self._state_listeners[entity_id].append(listener)
+        else:
+            self._state_listeners[entity_id] = [listener]
+
+    async def _update_states(self, states):
+        for state in states:
+            if state['entity_id'] in self._state_listeners:
+                for listener in self._state_listeners[state['entity_id']]:
+                    await listener.state_update(state['entity_id'], state)
